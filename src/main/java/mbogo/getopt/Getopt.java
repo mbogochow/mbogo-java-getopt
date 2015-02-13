@@ -64,6 +64,9 @@ public class Getopt
 
     this.optstrings = this.optstring.toCharArray();
 
+    /*
+     * Check optstrings for special starting characters
+     */
     if (this.optstrings[0] == '+')
     {
       scanMode = GetoptScanningMode.REQUIRE_ORDER;
@@ -75,7 +78,7 @@ public class Getopt
       nextchar += 1;
     }
     else
-      nonoptions = new LinkedList<>();
+      nonoptions = new LinkedList<>(); // Permute so init list
 
     if (this.optstrings[nextchar] == ':')
     {
@@ -93,20 +96,26 @@ public class Getopt
   public int getopt()
   {
     int option = -1;
-    int s;
+    boolean nonopt = false;
+    int i;
     String str;
-    int len;
+    String arg;
 
     optarg = null;
 
     while (optind < argv.length)
     {
-      str = argv[optind];
-      if (!processOptions || str.charAt(0) != '-')
+      arg = argv[optind];
+      str = arg.substring(nextchar);
+
+      if (nonopt = (str.length() == 1))
+        arg = str;
+
+      if (nonopt |= (!processOptions || arg.charAt(0) != '-'))
       { // str is a nonoption
         if (scanMode == GetoptScanningMode.PERMUTE)
         {
-          nonoptions.add(str);
+          nonoptions.add(arg);
           option = -1;
           optind += 1;
           continue;
@@ -114,7 +123,7 @@ public class Getopt
         else if (scanMode == GetoptScanningMode.REQUIRE_ORDER)
         {
           option = -1;
-          optarg = str;
+          optarg = arg;
           optind += 1;
           processOptions = false;
           break;
@@ -122,16 +131,18 @@ public class Getopt
         else if (scanMode == GetoptScanningMode.RETURN_IN_ORDER)
         {
           option = 1;
-          optarg = str;
+          optarg = arg;
           optind += 1;
           break;
         }
       }
 
-      len = str.length();
-      str = str.substring(nextchar);
       if (str.charAt(0) == '-')
       {
+        /*
+         * We know that str is at least 2 chars long here because of nonopt
+         * checking
+         */
         str = str.substring(1);
         nextchar += 2;
       }
@@ -150,10 +161,10 @@ public class Getopt
         continue;
       }
 
-      s = optstring.indexOf(option);
-      if (s != -1)
+      i = optstring.indexOf(option);
+      if (i != -1)
       {
-        int next = s + 1;
+        int next = i + 1;
         if (next < optstrings.length && optstrings[next] == ':')
         { // option takes an argument
           boolean last = str.length() == 1;
@@ -199,7 +210,7 @@ public class Getopt
           break;
         }
 
-        if (nextchar >= len)
+        if (nextchar >= arg.length())
         {
           optind += 1;
           nextchar = 0;
