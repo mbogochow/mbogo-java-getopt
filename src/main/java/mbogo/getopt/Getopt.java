@@ -3,8 +3,6 @@ package mbogo.getopt;
 import java.util.LinkedList;
 import java.util.List;
 
-import sun.misc.FpUtils;
-
 /**
  * Implementation of getopt for Java. This implementation loosely follows the
  * POSIX specification and GNU extensions but with modifications to better
