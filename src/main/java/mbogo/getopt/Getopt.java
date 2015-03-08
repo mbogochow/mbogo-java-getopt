@@ -1,8 +1,5 @@
 package mbogo.getopt;
 
-import java.util.LinkedList;
-import java.util.List;
-
 /**
  * Implementation of getopt for Java. This implementation loosely follows the
  * POSIX specification and GNU extensions but with modifications to better
@@ -44,6 +41,11 @@ public class Getopt
 
   private int opterr = 0;
 
+  /**
+   * Index of the first nonoption. Initialized to argv.length.
+   */
+  private int nonoptind;
+
   private GetoptScanningMode scanMode = GetoptScanningMode.PERMUTE;
 
   private final boolean sepMissingArg;
@@ -51,10 +53,13 @@ public class Getopt
   private boolean processOptions = true;
 
   /**
-   * List of nonoption arguments for permute scan mode.
+   * Builds a new instance.
+   * 
+   * @param argv
+   *          the array of arguments to be parsed
+   * @param optstring
+   *          the valid option characters to search for
    */
-  private List<String> nonoptions;
-
   public Getopt(final String[] argv, final String optstring)
   {
     this.argv = argv;
@@ -75,8 +80,6 @@ public class Getopt
       scanMode = GetoptScanningMode.RETURN_IN_ORDER;
       nextchar += 1;
     }
-    else
-      nonoptions = new LinkedList<>(); // Permute so init list
 
     if (this.optstrings[nextchar] == ':')
     {
@@ -85,16 +88,45 @@ public class Getopt
     }
     else
       sepMissingArg = false;
+    
+    this.nonoptind = argv.length;
   } /* Getopt constructor */
 
-  /*
-   * TODO: {Could add pre-processing to find the last option argument according
-   * to the scanning mode to make nonoption processing smarter.}
+  /**
+   * Permutes the element of <code>argv</code> at the given index to the end of
+   * the array.  Updates <code>nonoptind</code> if necessary.
+   * 
+   * @param index
+   *          the index to be permuted to the end of the array
    */
+  private void permute(final int index)
+  {
+    String tmp;
+
+    assert index >= 0 && index < argv.length;
+
+    tmp = argv[index];
+
+    for (int i = index + 1; i < argv.length; i++)
+    {
+      final int ind = i - 1;
+      
+      if (nonoptind == i)
+        nonoptind = ind;
+      
+      argv[ind] = argv[i];
+    }
+
+    int last = argv.length - 1;
+    if (nonoptind == argv.length)
+      nonoptind = last;
+
+    argv[last] = tmp;
+  } /* Getopt.permute */
+
   public int getopt()
   {
     int option = -1;
-    boolean nonopt = false;
     int i;
     String str;
     String arg;
@@ -104,25 +136,22 @@ public class Getopt
     while (optind < argv.length)
     {
       arg = argv[optind];
-      str = arg.substring(nextchar);
 
-      if (nonopt = (str.length() == 1))
-        arg = str;
+      if (optind >= nonoptind)
+        return option;
 
-      if (nonopt |= (!processOptions || arg.charAt(0) != '-'))
+      if (!processOptions || arg.length() < 2 || arg.charAt(0) != '-')
       { // str is a nonoption
         if (scanMode == GetoptScanningMode.PERMUTE)
         {
-          nonoptions.add(arg);
+          permute(optind);
           option = -1;
-          optind += 1;
           continue;
         }
         else if (scanMode == GetoptScanningMode.REQUIRE_ORDER)
         {
+          nonoptind = optind;
           option = -1;
-          optarg = arg;
-          optind += 1;
           processOptions = false;
           break;
         }
@@ -135,6 +164,7 @@ public class Getopt
         }
       }
 
+      str = arg.substring(nextchar);
       if (str.charAt(0) == '-')
       {
         /*
@@ -156,6 +186,7 @@ public class Getopt
          * arguments treated as nonoptions
          */
         processOptions = false;
+        optind += 1;
         continue;
       }
 
@@ -166,12 +197,18 @@ public class Getopt
         if (next < optstrings.length && optstrings[next] == ':')
         { // option takes an argument
           boolean last = str.length() == 1;
-          if (last) // end of argv element, get next as optarg
-            optarg = argv[++optind];
+          if (last) // end of argv element, get next as optarg if there is one
+          {
+            optind += 1;
+            if (optind == argv.length)
+              optarg = null;
+            else
+              optarg = argv[optind];
+          }
           else
             optarg = str.substring(1);
 
-          if (optarg.charAt(0) == '-')
+          if (optarg == null || optarg.charAt(0) == '-')
           { // illegal option (no argument)
             next += 1;
             if (next < optstrings.length && optstrings[next] == ':')
@@ -207,30 +244,22 @@ public class Getopt
 
           break;
         }
-
-        if (nextchar >= arg.length())
-        {
-          optind += 1;
-          nextchar = 0;
-        }
-
-        break;
       }
       else
       { // illegal option
         if (opterr != 0)
           System.err.printf("illegal option -- %c\n", option);
         option = '?';
-        break;
       }
-    } /* while */
 
-    if (optind >= argv.length && scanMode == GetoptScanningMode.PERMUTE
-        && option == -1)
-    {
-      optarg = nonoptions.get(0);
-      nonoptions.remove(0);
-    }
+      if (nextchar >= arg.length())
+      {
+        optind += 1;
+        nextchar = 0;
+      }
+
+      break;
+    } /* while */
 
     return option;
   } /* Getopt.getopt */
