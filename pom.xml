@@ -3,8 +3,16 @@
   <groupId>mbogo.getopt</groupId>
   <artifactId>mbogo-java-getopt</artifactId>
   <version>0.0.1</version>
-  <name>mbogo-java-getopt</name>
+  <packaging>jar</packaging>
+  <name>Getopt for Java</name>
   <description>Java implementation of getopt</description>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
   <build>
     <sourceDirectory>src/main/java</sourceDirectory>
     <plugins>
@@ -12,8 +20,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.1</version>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
     </plugins>
